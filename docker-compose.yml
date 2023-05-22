@@ -7,7 +7,8 @@ services:
     ports:
       - '3333:3333'
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "ace", "migration:run", "--force"]
       interval: 30s
@@ -17,14 +18,17 @@ services:
   db:
     image: mysql:latest
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: nombre-de-la-base-de-datos
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_NAME}
     ports:
       - '3306:3306'
     volumes:
+      - .docker/setup.sql:/docker-entrypoint-initdb.d/setup.sql
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h ${MYSQL_HOST} -u root -p${MYSQL_PASSWORD}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -38,7 +42,8 @@ services:
     ports:
       - '8080:80'
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:
