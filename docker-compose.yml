@@ -1,32 +1,20 @@
-version: '3'
+version: '3.8'
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - '3333:3333'
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "ace", "migration:run", "--force"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
   db:
+    container_name: mysql
     image: mysql:latest
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DB_NAME}
     ports:
-      - '3306:3306'
+      - '3308:3308'
     volumes:
-      - .docker/setup.sql:/docker-entrypoint-initdb.d/setup.sql
-      - db_data:/var/lib/mysql
+      - db:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h ${MYSQL_HOST} -u root -p${MYSQL_PASSWORD}"]
       interval: 30s
@@ -34,10 +22,11 @@ services:
       retries: 5
 
   phpmyadmin:
+    container_name: phpmyadmin
     image: phpmyadmin/phpmyadmin
     environment:
       PMA_HOST: db
-      PMA_PORT: 3306
+      PMA_PORT: 3308
       MYSQL_ROOT_PASSWORD: root
     ports:
       - '8080:80'
@@ -45,5 +34,17 @@ services:
       db:
         condition: service_healthy
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+    - .:/home/node/app
+    - /home/node/app/node_modules
+    ports:
+    - 3333:3333
+    depends_on:
+      - db
+
 volumes:
-  db_data:
+  db:
